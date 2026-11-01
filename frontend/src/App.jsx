@@ -2,6 +2,7 @@ import { useState } from 'react'
 import AppLayout from './layouts/AppLayout'
 import DriversPage from './components/DriversPage'
 import HealthPanel from './components/HealthPanel'
+import MasterDataPage from './components/master-data/MasterDataPage'
 import MetricCard from './components/MetricCard'
 import PlaceholderPage from './components/PlaceholderPage'
 import RecentEntries from './components/RecentEntries'
@@ -52,6 +53,18 @@ function App()
     if (activePage === 'Drivers')
     {
       return <DriversPage />
+    }
+    if (activePage === 'Delivery Sites')
+    {
+      return <MasterDataPage resource="deliverySites" />
+    }
+    if (activePage === 'Suppliers')
+    {
+      return <MasterDataPage resource="suppliers" />
+    }
+    if (activePage === 'Clients')
+    {
+      return <MasterDataPage resource="clients" />
     }
     return <PlaceholderPage title={activePage} />
   }

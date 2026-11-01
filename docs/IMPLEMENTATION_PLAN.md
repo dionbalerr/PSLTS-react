@@ -4,6 +4,19 @@
 
 Scaffold only. Legacy project remains untouched.
 
+## Approved Phase 2 design decisions
+
+- `MasterDataPage` is the shared page structure for Drivers, Delivery Sites, Suppliers, and Clients.
+- `DataTable` is shared; no separate `DriverTable`, `SiteTable`, `SupplierTable`, or `ClientTable` initially.
+- Add/edit uses a right-side drawer; the table remains visible.
+- Delete uses a confirmation dialog.
+- `SummaryCardRow` remains reusable but renders one total-count card initially.
+- Summary counts come from mock record counts; status and compliance metrics are deferred.
+- Resource config supplies verified Excel-derived columns, labels, field types, and business IDs.
+- Mock service boundary comes before Flask/API work.
+- Mobile drawer behavior is deferred (KIV) for a later phase.
+- Database validation, status derivation, permissions, and soft-delete cutoff rules remain deferred to the database/API phase.
+
 ## Phase 0 — Confirm baseline
 
 Deliverable: agreed behavior and redesign docs.
@@ -30,21 +43,23 @@ Scope:
 
 Verify: app starts locally; navigation works with fake routes/state.
 
-## Phase 2 — Drivers mock UX
+## Phase 2 — Shared master-data mock UX
 
-Deliverable: complete Drivers CRUD experience using fake data.
+Deliverable: shared mock CRUD experience, with Drivers as the first working vertical slice.
 
 Scope:
 
-- table
-- search, sort, filter
-- add/edit side panel
-- client-side validation feedback
-- soft-delete confirmation
-- Recently Deleted recovery view
-- success/error toasts
+- verified resource schemas from the legacy Excel workbooks
+- `MasterDataPage`
+- `SummaryCardRow` with one total-count card
+- shared `DataTable`
+- shared add/edit drawer and form
+- shared delete confirmation
+- mock data service boundary
+- Drivers first, then Delivery Sites, Suppliers, and Clients
+- desktop drawer only; mobile drawer deferred
 
-Verify: all user flows work without backend; UX review before API work.
+Verify: all four sections use the same CRUD structure and mock service; UX review before API work.
 
 ## Phase 3 — Flask API contract
 
@@ -95,8 +110,8 @@ Deliverable: Sites, Suppliers, and Clients CRUD.
 Scope:
 
 - separate tables
-- cleaned field names
-- entity-specific forms
+- verified field mappings
+- entity-specific resource configuration
 - shared table/form patterns
 
 Verify: each entity supports the approved CRUD contract and validation.
@@ -191,11 +206,11 @@ Verify: app starts from a clean checkout; every planned nav item renders; no bac
 
 ### Phase 2
 
-Action: add fake Drivers data, table, search/sort/filter, side-panel forms, delete/recovery, toasts.
+Action: define verified Excel-derived schemas; add mock data/service boundary; build `SummaryCardRow`, `SummaryCard`, `DataTable`, `MasterDataPage`, add/edit drawer/form, and delete confirmation. Connect Drivers first, then the remaining three resources.
 
-Test: component tests for render, validation, add/edit/delete/restore, empty/error states.
+Test: schema/config checks; render each resource; total-count card; search; add; edit; delete; restore; cancel; empty state; resource isolation.
 
-Verify: complete Drivers workflow works with fake data; UX review approved.
+Verify: all four sections use shared CRUD components and mock services; one total card renders per section; desktop drawer UX approved. Mobile drawer behavior remains deferred.
 
 ### Phase 3
 
@@ -284,12 +299,12 @@ Each phase follows: action → automated test → manual verification → go/sto
 
 ### Phase 2 — Runbook
 
-- Files: `frontend/src/features/drivers/`, shared table/form components, test fixtures.
-- Action: build Drivers table and side-panel add/edit flow with fake data.
-- Commands: `npm test`, `npm run build`, `npm run lint`.
-- Automated tests: render, required ID, duplicate ID, add, edit, search, sort, filter, delete, restore, toast/error states.
-- Manual verification: keyboard focus, cancel behavior, confirmation, Recently Deleted, empty/error states.
-- Go gate: UX approved before API payloads are frozen.
+- Files: `frontend/src/config/masterDataConfig.js`, `frontend/src/data/masterData.js`, `frontend/src/services/masterDataService.js`, `frontend/src/components/master-data/`, and resource wiring in `frontend/src/App.jsx`.
+- Action: define verified schemas; build shared total card, table, page, drawer/form, delete dialog, and mock service; connect Drivers first, then Sites, Suppliers, and Clients.
+- Commands: `npm run build`, `npm run lint`; component test command after test tooling is added.
+- Automated tests: schema headers, total count, resource rendering, search, add, edit, delete, restore, cancel, empty state, and resource isolation.
+- Manual verification: table remains visible behind drawer; drawer open/close; confirmation behavior; desktop width; no mobile drawer work in this phase.
+- Go gate: all four resources use shared CRUD structure; UX approved before Flask/API payloads are frozen.
 
 ### Phase 3 — Runbook
 
