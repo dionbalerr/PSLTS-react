@@ -26,6 +26,7 @@ Scope:
 - dashboard placeholder
 - entity navigation
 - responsive desktop/tablet structure
+- reusable shell components, not one monolithic `App.jsx`
 
 Verify: app starts locally; navigation works with fake routes/state.
 
@@ -259,3 +260,105 @@ Action: deploy frontend/API/database candidate; configure HTTPS, environment sec
 Test: production smoke tests, login, CRUD, restore, audit, import/export, backup/restore rehearsal.
 
 Verify: deployed app works from clean browser; secrets absent from repository; local setup remains reproducible; rollback path documented.
+
+## Execution runbook
+
+Each phase follows: action → automated test → manual verification → go/stop gate.
+
+### Phase 0 — Runbook
+
+- Files: `docs/CURRENT_APP_BEHAVIOR.md`, `docs/REDESIGN_BRIEF.md`.
+- Action: compare legacy behavior against planned behavior.
+- Test: document review only; no app execution.
+- Manual verification: confirm scope, assumptions, non-goals, and legacy boundary.
+- Go gate: proceed only when no business rule is silently changed.
+
+### Phase 1 — Runbook
+
+- Files: `frontend/package.json`, `frontend/src/`, `frontend/index.html`.
+- Action: initialize React; extract `AppLayout`, `Sidebar`, `Topbar`, `MetricCard`, `Panel`, and `ActivityRow`; build dashboard placeholder and entity navigation.
+- Commands: `npm install`, `npm run dev`, `npm run build`, `npm run lint`.
+- Automated tests: shell renders; each nav route resolves; build passes.
+- Manual verification: desktop/tablet layout, active nav, browser refresh, empty dashboard, reusable component boundaries.
+- Go gate: shell approved; `App.jsx` remains orchestration only; no backend dependency.
+
+### Phase 2 — Runbook
+
+- Files: `frontend/src/features/drivers/`, shared table/form components, test fixtures.
+- Action: build Drivers table and side-panel add/edit flow with fake data.
+- Commands: `npm test`, `npm run build`, `npm run lint`.
+- Automated tests: render, required ID, duplicate ID, add, edit, search, sort, filter, delete, restore, toast/error states.
+- Manual verification: keyboard focus, cancel behavior, confirmation, Recently Deleted, empty/error states.
+- Go gate: UX approved before API payloads are frozen.
+
+### Phase 3 — Runbook
+
+- Files: `backend/app/`, route modules, schemas, repository interface, `backend/tests/`.
+- Action: create Flask app factory, versioned Drivers routes, schemas, error handler, in-memory test repository.
+- Commands: `python -m pytest`, Flask local run command.
+- Automated tests: status codes, response shapes, duplicate conflict, invalid fields, missing record, search, sort allowlist, pagination, soft-delete, restore.
+- Manual verification: inspect JSON with API client; compare payloads with React fake data.
+- Go gate: API contract matches frontend exactly; tests do not require PostgreSQL.
+
+### Phase 4 — Runbook
+
+- Files: `infra/docker-compose.yml`, `backend/models/`, `backend/migrations/`, DB config.
+- Action: start PostgreSQL; add SQLAlchemy models; create Alembic revisions; add constraints/indexes.
+- Commands: `docker compose up -d db`; migration upgrade; migration rollback/upgrade.
+- Automated tests: empty-DB upgrade, downgrade where supported, unique ID, UUID, timestamps, version, nullable deletion.
+- Manual verification: inspect tables, indexes, constraints, and connection settings.
+- Go gate: fresh database reproduced from migrations only.
+
+### Phase 5 — Runbook
+
+- Files: `backend/repositories/`, `backend/services/`, `frontend/src/api/`, integration tests.
+- Action: replace fake repository with PostgreSQL; connect React API client; add loading/error states.
+- Commands: start DB, apply migrations, start Flask, start React, run backend/frontend/end-to-end tests.
+- Automated tests: create/read/update/search/filter/delete/restore, stale-version rejection, rollback on failure.
+- Manual verification: browser mutation, refresh persistence, network error, empty state.
+- Go gate: browser → Flask → PostgreSQL Drivers workflow passes on fresh DB.
+
+### Phase 6 — Runbook
+
+- Files: entity models, schemas, routes, repositories, feature folders.
+- Action: add sites, suppliers, clients one entity at a time using shared patterns.
+- Commands: full backend tests, frontend tests, production build.
+- Automated tests: contract matrix, unique IDs, null handling, numeric fields, legacy-name mapping.
+- Manual verification: representative CRUD/restore flow per entity; search/filter/forms.
+- Go gate: four entities behave consistently without entity-specific regressions.
+
+### Phase 7 — Runbook
+
+- Files: auth service, user model, session middleware, permission checks, audit service, security tests.
+- Action: add invite/login/reset, roles, protected routes, cutoff restore, audit writes, user admin.
+- Commands: backend tests, security tests, dependency audit command selected for project.
+- Automated tests: wrong password, reset, disabled user, role bypass, CSRF/session behavior, cutoff, restore ownership, audit completeness.
+- Manual verification: login/logout/reset; Editor/Admin UI; expired restore; audit filters; secret-free logs.
+- Go gate: server rejects unauthorized requests even when UI controls are bypassed.
+
+### Phase 8 — Runbook
+
+- Files: dashboard query/service routes, dashboard React feature, fixtures.
+- Action: add counts, recent entries, recent changes, data-health queries.
+- Commands: backend tests, frontend tests, production build.
+- Automated tests: count correctness, date ordering, role visibility, empty/error states.
+- Manual verification: compare dashboard totals with tables; manual refresh; slow query behavior.
+- Go gate: metrics match database facts; realtime not required.
+
+### Phase 9 — Runbook
+
+- Files: import/export service, mapping rules, upload UI, import tests, retention storage.
+- Action: parse workbook, map names, preview, validate, commit accepted batch, retain source/summary.
+- Commands: import fixture test suite; export comparison check.
+- Automated tests: valid file, missing columns, malformed values, duplicate rows, repeated import, empty file, partial rejection.
+- Manual verification: preview errors, approve/cancel, inspect summary, reopen export.
+- Go gate: no silent partial import; rejected rows explain failure.
+
+### Phase 10 — Runbook
+
+- Files: deployment config, env templates, CI checks, operations docs.
+- Action: deploy frontend/API/DB candidate; configure HTTPS, secrets, backups, spend alerts, health checks.
+- Commands: CI build/test, deployment, smoke-test, rollback commands.
+- Automated tests: build artifacts, migration check, health endpoint, protected API smoke tests.
+- Manual verification: fresh-browser login, CRUD, restore, audit, import/export, backup/restore rehearsal.
+- Go gate: deployed app works; secrets absent from Git; rollback documented.
