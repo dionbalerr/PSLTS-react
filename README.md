@@ -1,6 +1,6 @@
 # PSLTS Redesign
 
-Online-first PSLTS logistics master-data app.
+PSLTS logistics master-data app rewritten into React.
 
 ## Planned stack
 
