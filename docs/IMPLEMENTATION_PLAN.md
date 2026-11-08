@@ -64,7 +64,15 @@ Verify: all four sections use the same CRUD structure and mock service; UX revie
 
 ## Phase 2A — Frontend field validation
 
-Status: implemented; lint/build pass; manual drawer checks remain.
+Status: verified; lint/build pass; manual drawer checks passed.
+
+Manual verification result:
+
+- required-field errors blocked invalid add/edit saves
+- `12.5` and `12.50` accepted; `12.499` rejected
+- valid records saved and appeared in the table
+- delete/restore behavior remained unchanged
+- all four master-data pages checked
 
 Scope:
 
@@ -106,6 +114,8 @@ Risks/tradeoffs: validation rules may change after database design; uncertain fi
 
 Deliverable: clean Flask JSON API for Drivers.
 
+Status: implemented; Astra review passed; 15 backend tests pass; manual API-client check remains.
+
 Scope:
 
 - versioned REST routes
@@ -115,6 +125,43 @@ Scope:
 - business-ID uniqueness rules
 
 Verify: API tests cover success, invalid input, duplicates, missing records, and pagination.
+
+Technical design:
+
+- Create a new Flask backend in this repository; leave the legacy Flask project untouched.
+- Use an app factory so tests can create isolated Flask app instances.
+- Use `/api/v1/` route prefix from the first endpoint.
+- Return JSON only; keep response shapes stable for the React client.
+- Keep route handlers thin: routes translate HTTP, schemas validate data, repositories store data.
+- Use an in-memory repository in Phase 3; PostgreSQL starts in Phase 4.
+- Use `201 Created` for successful create, `200 OK` for reads/updates/restores, and consistent `4xx` JSON errors.
+- Keep authentication and permissions deferred to Phase 7.
+- Keep React mock service active until the API contract is approved and connected in Phase 5.
+
+Backend file structure:
+
+```text
+backend/
+├─ app/
+│  ├─ __init__.py
+│  ├─ errors.py
+│  └─ routes/
+│     ├─ __init__.py
+│     └─ drivers.py
+├─ schemas/
+│  ├─ __init__.py
+│  └─ drivers.py
+├─ repositories/
+│  ├─ __init__.py
+│  └─ drivers.py
+├─ tests/
+│  ├─ conftest.py
+│  └─ test_drivers_api.py
+├─ requirements.txt
+└─ run.py
+```
+
+Phase 3 does not copy legacy Flask files. It ports verified behavior and field definitions into this structure.
 
 ## Phase 4 — Local PostgreSQL foundation
 
