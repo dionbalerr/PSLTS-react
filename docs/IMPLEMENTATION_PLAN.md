@@ -167,7 +167,7 @@ Phase 3 does not copy legacy Flask files. It ports verified behavior and field d
 
 Deliverable: repeatable local database setup.
 
-Status: DB verification deferred; Astra review passed; compile and 15 backend tests pass.
+Status: verified; Astra review passed; local PostgreSQL migration and DB tests pass.
 
 Scope:
 
@@ -180,6 +180,23 @@ Scope:
 - timestamps and row versions
 
 Verify: fresh database can be created from migrations; schema matches API needs.
+
+## Phase 4B — PostgreSQL API integration
+
+Status: verified; Astra review passed; 24 backend tests pass against isolated `pslts_test`.
+
+Scope:
+
+- SQLAlchemy-backed Drivers repository
+- PostgreSQL-backed Flask startup
+- explicit `DATABASE_URL` and `TEST_DATABASE_URL`
+- test database identity guard
+- migration before DB tests
+- transaction rollback and unique-ID conflict handling
+- API contract preservation between in-memory and PostgreSQL repositories
+- soft-delete, restore, deleted-ID reservation, timestamps, and row versions
+
+Verification result: `pslts_dev` and `pslts_test` connections pass; migration applied to both; 9 PostgreSQL integration tests pass. DB-test cleanup targets only `pslts_test`.
 
 ## Phase 5 — Connect Drivers end to end
 

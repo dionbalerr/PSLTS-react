@@ -32,13 +32,13 @@ class DriverRepository:
             records = [
                 record for record in records
                 if search in ' '.join(
-                    str(value)
+                    str(value or '')
                     for key, value in record.items()
                     if key != 'deleted'
                 ).lower()
             ]
 
-        records.sort(key=lambda record: str(record.get(sort, '')).lower(), reverse=direction == 'desc')
+        records.sort(key=lambda record: str(record.get(sort, '') or '').lower(), reverse=direction == 'desc')
         total = len(records)
         start = (page - 1) * page_size
         items = records[start:start + page_size]

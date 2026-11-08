@@ -1,5 +1,6 @@
 from flask import Blueprint, current_app, jsonify, request
 
+from repositories.sqlalchemy_drivers import DuplicateDriverError
 from schemas.drivers import validate_driver
 
 
@@ -54,7 +55,7 @@ def create_driver():
     repository = current_app.extensions['driver_repository']
     try:
         driver = repository.create(payload)
-    except KeyError:
+    except (KeyError, DuplicateDriverError):
         return error_response('duplicate_driver_no', 'Driver ID already exists.', status=409)
 
     return jsonify(data=driver), 201
@@ -85,7 +86,7 @@ def update_driver(driver_id):
         driver = repository.update(driver_id, payload)
     except KeyError:
         return error_response('not_found', 'Driver not found.', status=404)
-    except ValueError:
+    except (ValueError, DuplicateDriverError):
         return error_response('duplicate_driver_no', 'Driver ID already exists.', status=409)
 
     return jsonify(data=driver), 200
