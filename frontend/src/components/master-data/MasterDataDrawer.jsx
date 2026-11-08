@@ -19,20 +19,50 @@ function formatPhone(value)
   return digits
 }
 
+function validateForm(config, form)
+{
+  return config.columns.reduce((currentErrors, field) =>
+  {
+    const value = form[field.key] || ''
+
+    if (field.required && !value.trim())
+    {
+      return { ...currentErrors, [field.key]: `${field.label} is required.` }
+    }
+
+    if (field.type === 'money' && value && !/^\d+(\.\d{1,2})?$/.test(value))
+    {
+      return { ...currentErrors, [field.key]: `${field.label} allows up to 2 decimal places.` }
+    }
+
+    return currentErrors
+  }, {})
+}
+
 function MasterDataDrawer({ config, record, onClose, onSave })
 {
   const [form, setForm] = useState(record || {})
+  const [errors, setErrors] = useState({})
 
   function handleChange(event)
   {
     const field = config.columns.find((item) => item.key === event.target.name)
     const value = field.type === 'phone' ? normalizePhone(event.target.value) : event.target.value
     setForm((current) => ({ ...current, [event.target.name]: value }))
+    setErrors((current) => ({ ...current, [event.target.name]: undefined }))
   }
 
   function handleSubmit(event)
   {
     event.preventDefault()
+
+    const nextErrors = validateForm(config, form)
+    if (Object.keys(nextErrors).length > 0)
+    {
+      setErrors(nextErrors)
+      return
+    }
+
     onSave(form)
   }
 
@@ -52,7 +82,8 @@ function MasterDataDrawer({ config, record, onClose, onSave })
           {config.columns.map((field) => (
             <label className="form-field" key={field.key}>
               <span>{field.label}</span>
-              <input inputMode={field.type === 'phone' ? 'numeric' : undefined} name={field.key} onChange={handleChange} required={field.key === config.idField} value={field.type === 'phone' ? formatPhone(form[field.key] || '') : form[field.key] || ''} />
+              <input aria-invalid={Boolean(errors[field.key])} inputMode={field.type === 'phone' ? 'numeric' : field.type === 'money' ? 'decimal' : undefined} name={field.key} onChange={handleChange} value={field.type === 'phone' ? formatPhone(form[field.key] || '') : form[field.key] || ''} />
+              {errors[field.key] && <span className="form-error">{errors[field.key]}</span>}
             </label>
           ))}
           <div className="drawer-actions">

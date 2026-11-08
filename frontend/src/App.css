@@ -358,6 +358,15 @@ button { cursor: pointer; }
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
+.form-field input[aria-invalid='true'] {
+  border-color: #dc5b69;
+}
+
+.form-field .form-error {
+  color: #dc5b69;
+  font-size: 11px;
+}
+
 .drawer-actions {
   display: flex;
   justify-content: flex-end;

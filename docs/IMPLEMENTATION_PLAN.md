@@ -16,6 +16,7 @@ Scaffold only. Legacy project remains untouched.
 - Mock service boundary comes before Flask/API work.
 - Mobile drawer behavior is deferred (KIV) for a later phase.
 - Database validation, status derivation, permissions, and soft-delete cutoff rules remain deferred to the database/API phase.
+- Money values use decimal-safe boundaries: frontend/API represent input as strings, backend uses `Decimal`, and PostgreSQL later uses `NUMERIC(12,2)`; values with more than two decimal places are rejected.
 
 ## Phase 0 — Confirm baseline
 
@@ -61,6 +62,46 @@ Scope:
 
 Verify: all four sections use the same CRUD structure and mock service; UX review before API work.
 
+## Phase 2A — Frontend field validation
+
+Status: implemented; lint/build pass; manual drawer checks remain.
+
+Scope:
+
+- required fields per resource
+- numeric-only phone input
+- MYR money fields displayed and checked to two decimal places
+- represent money input as strings at frontend/API boundaries; reject more than two decimal places
+- inline drawer validation messages
+- keep uncertain Commission, Road Tax, and Inspection fields as strings
+- no database or API validation yet
+
+Files/actions:
+
+- update `frontend/src/config/masterDataConfig.js` with validation metadata
+- update `frontend/src/components/master-data/MasterDataDrawer.jsx` with validation and error display
+- add focused frontend tests if test tooling exists; otherwise record manual checks
+
+Test plan:
+
+- empty required fields block save
+- invalid phone input blocks save
+- invalid money input blocks save
+- valid add saves record
+- valid edit updates record
+- delete, restore, and cancel remain unchanged
+
+Verification:
+
+- run `npm.cmd run lint`
+- run `npm.cmd run build`
+- manually test add/edit for all four resources
+- confirm errors appear beside affected fields and clear after correction
+
+Success criteria: invalid records cannot save; valid records save; money values accept up to two decimal places without frontend floating-point conversion; existing CRUD behavior remains unchanged.
+
+Risks/tradeoffs: validation rules may change after database design; uncertain fields stay intentionally permissive; decimal normalization remains a backend/DB responsibility.
+
 ## Phase 3 — Flask API contract
 
 Deliverable: clean Flask JSON API for Drivers.
@@ -84,6 +125,7 @@ Scope:
 - Docker PostgreSQL
 - SQLAlchemy models
 - Alembic migrations
+- money columns as PostgreSQL `NUMERIC(12,2)`; no integer-cents conversion
 - UUID/internal IDs
 - business IDs and constraints
 - timestamps and row versions
@@ -305,6 +347,14 @@ Each phase follows: action → automated test → manual verification → go/sto
 - Automated tests: schema headers, total count, resource rendering, search, add, edit, delete, restore, cancel, empty state, and resource isolation.
 - Manual verification: table remains visible behind drawer; drawer open/close; confirmation behavior; desktop width; no mobile drawer work in this phase.
 - Go gate: all four resources use shared CRUD structure; UX approved before Flask/API payloads are frozen.
+
+### Phase 2A — Runbook
+
+- Files: `frontend/src/config/masterDataConfig.js`, `frontend/src/components/master-data/MasterDataDrawer.jsx`, and frontend tests if available.
+- Action: add config-driven required/type rules; validate before mock-service save; render field-level errors.
+- Automated tests: required fields, phone digits, up-to-two-decimal money, rejection of more than two decimals, valid add, valid edit, and unchanged delete/restore.
+- Manual verification: test each resource drawer; correct invalid values; confirm errors clear; confirm valid records save.
+- Go gate: validation works consistently across all four resources; no API/DB work included.
 
 ### Phase 3 — Runbook
 
