@@ -167,9 +167,11 @@ Phase 3 does not copy legacy Flask files. It ports verified behavior and field d
 
 Deliverable: repeatable local database setup.
 
+Status: DB verification deferred; Astra review passed; compile and 15 backend tests pass.
+
 Scope:
 
-- Docker PostgreSQL
+- existing local PostgreSQL server
 - SQLAlchemy models
 - Alembic migrations
 - money columns as PostgreSQL `NUMERIC(12,2)`; no integer-cents conversion
@@ -311,7 +313,7 @@ Verify: API contract matches frontend needs; tests run without PostgreSQL.
 
 ### Phase 4
 
-Action: add Docker PostgreSQL, SQLAlchemy models, Alembic migrations, constraints, timestamps, UUIDs, versions.
+Action: verify local PostgreSQL; add SQLAlchemy models, Alembic migrations, constraints, timestamps, UUIDs, and versions.
 
 Test: migration upgrade from empty DB; downgrade where supported; constraint tests; fresh database setup.
 
@@ -414,9 +416,15 @@ Each phase follows: action → automated test → manual verification → go/sto
 
 ### Phase 4 — Runbook
 
-- Files: `infra/docker-compose.yml`, `backend/models/`, `backend/migrations/`, DB config.
-- Action: start PostgreSQL; add SQLAlchemy models; create Alembic revisions; add constraints/indexes.
-- Commands: `docker compose up -d db`; migration upgrade; migration rollback/upgrade.
+- Files: `backend/models/`, `backend/migrations/`, `backend/config.py`, `backend/.env.example`.
+- Action: verify local PostgreSQL; add SQLAlchemy models; create Alembic revisions; add constraints/indexes.
+- Commands:
+  - create local database `pslts` using pgAdmin or `createdb pslts`
+  - from PowerShell, set `$env:DATABASE_URL = 'postgresql+psycopg://USER:PASSWORD@localhost:5432/pslts'`
+  - note: `.env.example` documents the variable; it is not loaded automatically
+  - from `backend/`, run `alembic upgrade head`
+  - run `py -m pytest`
+  - rollback with `alembic downgrade -1`, then rerun `alembic upgrade head`
 - Automated tests: empty-DB upgrade, downgrade where supported, unique ID, UUID, timestamps, version, nullable deletion.
 - Manual verification: inspect tables, indexes, constraints, and connection settings.
 - Go gate: fresh database reproduced from migrations only.

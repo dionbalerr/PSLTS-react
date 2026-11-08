@@ -1,0 +1,9 @@
+import os
+
+
+def get_database_url():
+    database_url = os.getenv('DATABASE_URL')
+    if not database_url:
+        raise RuntimeError('DATABASE_URL is required for database operations.')
+
+    return database_url
