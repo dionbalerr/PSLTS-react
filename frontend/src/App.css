@@ -367,6 +367,20 @@ button { cursor: pointer; }
   font-size: 11px;
 }
 
+.form-error-summary,
+.api-error {
+  border: 1px solid #dc5b69;
+  border-radius: 6px;
+  color: #a93645;
+  background: #fff1f2;
+  padding: 10px;
+  font-size: 12px;
+}
+
+.api-error {
+  margin-bottom: 14px;
+}
+
 .drawer-actions {
   display: flex;
   justify-content: flex-end;
@@ -498,6 +512,17 @@ button { cursor: pointer; }
 
 .data-table-panel table {
   min-width: 980px;
+}
+
+.table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
 }
 
 @media (max-width: 900px) {

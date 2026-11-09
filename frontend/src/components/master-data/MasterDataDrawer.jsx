@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 
 function normalizePhone(value)
 {
@@ -39,7 +39,7 @@ function validateForm(config, form)
   }, {})
 }
 
-function MasterDataDrawer({ config, record, onClose, onSave })
+function MasterDataDrawer({ config, error, record, onClose, onSave, saving })
 {
   const [form, setForm] = useState(record || {})
   const [errors, setErrors] = useState({})
@@ -66,29 +66,38 @@ function MasterDataDrawer({ config, record, onClose, onSave })
     onSave(form)
   }
 
+  function handleClose()
+  {
+    if (!saving)
+    {
+      onClose()
+    }
+  }
+
   const isEditing = Boolean(record)
 
   return (
-    <div className="drawer-backdrop" role="presentation" onMouseDown={onClose}>
+    <div className="drawer-backdrop" role="presentation" onMouseDown={handleClose}>
       <aside className="data-drawer" onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="drawer-title">
         <div className="drawer-heading">
           <div>
             <p className="eyebrow">MASTER DATA</p>
             <h2 id="drawer-title">{isEditing ? `Edit ${config.singular}` : `Add ${config.singular}`}</h2>
           </div>
-          <button className="icon-button" onClick={onClose} type="button" aria-label="Close">×</button>
+          <button className="icon-button" disabled={saving} onClick={handleClose} type="button" aria-label="Close">×</button>
         </div>
         <form className="data-form" onSubmit={handleSubmit}>
+          {error && <div className="form-error-summary" role="alert">{error.message}</div>}
           {config.columns.map((field) => (
             <label className="form-field" key={field.key}>
               <span>{field.label}</span>
-              <input aria-invalid={Boolean(errors[field.key])} inputMode={field.type === 'phone' ? 'numeric' : field.type === 'money' ? 'decimal' : undefined} name={field.key} onChange={handleChange} value={field.type === 'phone' ? formatPhone(form[field.key] || '') : form[field.key] || ''} />
-              {errors[field.key] && <span className="form-error">{errors[field.key]}</span>}
+              <input aria-invalid={Boolean(errors[field.key] || error?.fields?.[field.key])} aria-label={field.label} disabled={saving} inputMode={field.type === 'phone' ? 'numeric' : field.type === 'money' ? 'decimal' : undefined} name={field.key} onChange={handleChange} value={field.type === 'phone' ? formatPhone(form[field.key] || '') : form[field.key] || ''} />
+              {(errors[field.key] || error?.fields?.[field.key]) && <span className="form-error">{errors[field.key] || error.fields[field.key]}</span>}
             </label>
           ))}
           <div className="drawer-actions">
-            <button className="filter-button" onClick={onClose} type="button">Cancel</button>
-            <button className="primary-button" type="submit">Save</button>
+            <button className="filter-button" disabled={saving} onClick={onClose} type="button">Cancel</button>
+            <button className="primary-button" disabled={saving} type="submit">{saving ? 'Saving...' : 'Save'}</button>
           </div>
         </form>
       </aside>

@@ -1,3 +1,5 @@
+import React from 'react'
+
 function DataTable({ columns, rows, onEdit, onDelete })
 {
   if (rows.length === 0)

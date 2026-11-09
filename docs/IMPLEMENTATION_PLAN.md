@@ -202,14 +202,30 @@ Verification result: `pslts_dev` and `pslts_test` connections pass; migration ap
 
 Deliverable: React Drivers UI backed by Flask + PostgreSQL.
 
+Status: implemented; Astra final review passed; frontend checks pass.
+
 Scope:
 
-- replace fake data with API calls
-- loading/empty/error states
-- stale-edit detection
-- transaction-safe CRUD
+- replace Drivers fake data with Flask API calls; keep Sites, Suppliers, and Clients mock-backed
+- API client for list, create, update, delete, and restore
+- loading, empty, API-error, drawer-error, and delete-dialog error states
+- server-side search and pagination
+- stale-response protection and duplicate restore prevention
+- Vite development proxy and environment-based API base URL
+- frontend API and UI regression tests
+- stale-edit detection remains deferred
 
-Verify: full Drivers workflow passes against a fresh local database.
+Verification:
+
+- Astra final code review: no issues found
+- `npm.cmd run lint`: passes with one existing React set-state-in-effect warning in `MasterDataPage.jsx`
+- `npm.cmd run test`: 12 tests pass
+- `npm.cmd run build`: passes
+- backend integration coverage already passes against isolated `pslts_test`
+
+Success criteria: Drivers UI loads and mutates through the Flask/PostgreSQL path; failed mutations preserve user context; search, pagination, delete/restore, and request-state behavior are covered by automated tests.
+
+Remaining limitation: browser-level manual verification and stale-edit detection are deferred.
 
 ## Phase 6 — Generalize master data
 
