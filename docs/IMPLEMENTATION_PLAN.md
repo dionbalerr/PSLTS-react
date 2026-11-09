@@ -231,14 +231,54 @@ Remaining limitation: browser-level manual verification and stale-edit detection
 
 Deliverable: Sites, Suppliers, and Clients CRUD.
 
+Status: implemented; Astra final review passed; backend and frontend checks pass.
+
+Prerequisite: approve the field matrix below after comparing it with the legacy Excel files and legacy implementation. No Phase 6 schema/API implementation starts before this check.
+
+Source verification result: Excel headers match the candidate matrix for Delivery Sites, Suppliers, and Clients. Legacy HTML marked only business IDs as required; the additional name/origin/destination requirements are intentional redesign rules from the approved matrix.
+
+Candidate field matrix:
+
+| Entity | Fields | Required | Unique ID | Money fields | Type notes |
+|---|---|---|---|---|---|
+| Delivery Sites | `SITE_NO`, `ORIGINATE`, `DESTINATE`, `GOODS`, `GROSS_PRC`, `NET_PRC`, `CLIENT_NO` | `SITE_NO`, `ORIGINATE`, `DESTINATE` | `SITE_NO` | `GROSS_PRC`, `NET_PRC` | money uses `NUMERIC(12,2)`; other uncertain fields stay strings |
+| Suppliers | `SUPPLIER_NO`, `NAME`, `TELEPHONE`, `CONTACT`, `GOODS`, `TERMS`, `CURR_BAL` | `SUPPLIER_NO`, `NAME` | `SUPPLIER_NO` | `CURR_BAL` | phone stores raw digits; money uses `NUMERIC(12,2)` |
+| Clients | `CLIENT_NO`, `NAME_CO`, `CONTACT`, `CONTACT_NO`, `ADDRESS_1`, `ADDRESS_2`, `POSTCODE`, `CITY` | `CLIENT_NO`, `NAME_CO` | `CLIENT_NO` | none | phone stores raw digits; other fields stay strings |
+
 Scope:
 
 - separate tables
 - verified field mappings
 - entity-specific resource configuration
 - shared table/form patterns
+- same list, create, update, delete, restore, search, and pagination contract as Drivers
+- no filter feature in this phase
 
-Verify: each entity supports the approved CRUD contract and validation.
+Validation ownership:
+
+- React: immediate required, phone, and money feedback.
+- Flask: authoritative request validation and field allowlists.
+- PostgreSQL: `NOT NULL`, unique IDs, soft-delete rules, and numeric precision.
+- Money accepts at most two decimal places.
+- Phone fields accept raw digits only.
+- Uncertain non-money fields remain strings.
+
+Technical design:
+
+- Add `backend/models/{delivery_site,supplier,client}.py`.
+- Add entity schemas and route modules under `backend/schemas/` and `backend/app/routes/`.
+- Add entity repositories under `backend/repositories/`, preserving the Drivers contract.
+- Add one Alembic migration for the three tables.
+- Extend the frontend API client with per-resource field allowlists.
+- Keep `MasterDataPage`, `DataTable`, `MasterDataDrawer`, delete, restore, and request-state behavior shared.
+
+Verify: fresh migration creates all three tables; each entity passes PostgreSQL CRUD, duplicate-ID, validation, delete, restore, search, and pagination tests; existing Drivers tests remain passing.
+
+Success criteria: browser-facing React flows use the same shared structure; API and PostgreSQL persistence work for all four entities; no mock data remains for connected resources; field mappings match the approved legacy matrix.
+
+Risks/tradeoffs: legacy Excel names may differ from current config; schema changes wait for field-matrix confirmation; no filter or mobile behavior is added here.
+
+Verification result: `42 passed` backend tests against isolated `pslts_test`; `19 passed` frontend tests; frontend lint passes; frontend production build passes. Optional browser smoke check remains deferred.
 
 ## Phase 7 — Auth, permissions, deletion, audit
 
@@ -362,11 +402,17 @@ Verify: add/edit/delete/restore/search/pagination work across browser → Flask 
 
 ### Phase 6
 
-Action: add site, supplier, and client models, API routes, forms, and tables using shared patterns.
+Prerequisite: compare the candidate field matrix against old Excel files and legacy code; record approved names, required/null rules, types, money fields, unique IDs, and source mapping.
 
-Test: repeat entity contract tests; field validation; unique-ID constraints; representative end-to-end flow per entity.
+Files: `backend/models/`, `backend/schemas/`, `backend/repositories/`, `backend/app/routes/`, `backend/migrations/versions/0002_create_master_data_tables.py`, `backend/tests/`, `frontend/src/api/`, `frontend/src/config/masterDataConfig.js`, `frontend/src/components/master-data/`.
 
-Verify: all four entities work without copy-paste-specific regressions.
+Action: add delivery sites, suppliers, and clients one entity at a time using the existing Drivers contract and shared React structure.
+
+Test: fresh test-database migration; per-entity CRUD persistence, required/null rules, unique IDs, numeric precision, raw-digit phones, delete/restore, search, pagination, legacy-name mapping, and Drivers regression tests.
+
+Verify: every entity persists correctly through API and PostgreSQL; frontend tests, lint, and build pass. Optional browser smoke check covers one representative CRUD/restore flow per entity; no filter check because filtering is deferred.
+
+Go gate: four entities behave consistently without entity-specific regressions.
 
 ### Phase 7
 
@@ -473,12 +519,13 @@ Each phase follows: action → automated test → manual verification → go/sto
 
 ### Phase 6 — Runbook
 
-- Files: entity models, schemas, routes, repositories, feature folders.
-- Action: add sites, suppliers, clients one entity at a time using shared patterns.
-- Commands: full backend tests, frontend tests, production build.
-- Automated tests: contract matrix, unique IDs, null handling, numeric fields, legacy-name mapping.
-- Manual verification: representative CRUD/restore flow per entity; search/filter/forms.
-- Go gate: four entities behave consistently without entity-specific regressions.
+- Prerequisite: compare the candidate field matrix against old Excel files and legacy code; record approved names, required/null rules, types, money fields, unique IDs, and source mapping.
+- Files: entity models, schemas, routes, repositories, migration, backend tests, frontend API/config/components.
+- Action: add delivery sites, suppliers, and clients one entity at a time using the existing Drivers contract and shared React structure.
+- Commands: fresh test-database migration, full backend tests, frontend tests, production build.
+- Automated tests: fresh migration, per-entity CRUD persistence, required/null rules, unique IDs, numeric precision, raw-digit phones, delete/restore, search, pagination, legacy-name mapping, and Drivers regression tests.
+- Manual verification: optional browser smoke check for one representative CRUD/restore flow per entity; no filter check because filtering is deferred.
+- Go gate: every entity persists correctly through API and PostgreSQL; all four entities behave consistently without entity-specific regressions.
 
 ### Phase 7 — Runbook
 

@@ -76,18 +76,72 @@ def db_client():
         if connection.scalar(text('SELECT current_database()')) != 'pslts_test':
             pytest.fail('Connected database is not pslts_test.')
     migrate_test_database(test_url)
-    if not inspect(engine).has_table('drivers'):
-        pytest.fail('pslts_test is not migrated. Run: alembic upgrade head')
+    missing_tables = [
+        table for table in ('drivers', 'delivery_sites', 'suppliers', 'clients')
+        if not inspect(engine).has_table(table)
+    ]
+    if missing_tables:
+        pytest.fail(f'pslts_test is missing tables: {missing_tables}. Run: alembic upgrade head')
 
     with engine.begin() as connection:
-        connection.execute(text('TRUNCATE TABLE drivers'))
+        connection.execute(text('TRUNCATE TABLE clients, suppliers, delivery_sites, drivers'))
 
     app = create_app(session_factory=session_factory)
     app.config.update(TESTING=True)
     yield app.test_client()
 
     with engine.begin() as connection:
-        connection.execute(text('TRUNCATE TABLE drivers'))
+        connection.execute(text('TRUNCATE TABLE clients, suppliers, delivery_sites, drivers'))
+
+
+@pytest.mark.db
+@pytest.mark.parametrize('path,payload,id_field', [
+    ('delivery-sites', {'SITE_NO': 'DB-SITE-001', 'ORIGINATE': 'Origin', 'DESTINATE': 'Destination', 'GROSS_PRC': '12.50'}, 'SITE_NO'),
+    ('suppliers', {'SUPPLIER_NO': 'DB-SUP-001', 'NAME': 'Supplier', 'CURR_BAL': '1.00'}, 'SUPPLIER_NO'),
+    ('clients', {'CLIENT_NO': 'DB-CLI-001', 'NAME_CO': 'Client'}, 'CLIENT_NO'),
+])
+def test_db_master_data_persists_across_requests(db_client, path, payload, id_field):
+    record_id = payload[id_field]
+    create_response = db_client.post(f'/api/v1/{path}', json=payload)
+
+    assert create_response.status_code == 201
+    assert db_client.get(f'/api/v1/{path}/{record_id}').json['data'][id_field] == record_id
+    assert db_client.delete(f'/api/v1/{path}/{record_id}').status_code == 200
+    assert db_client.post(f'/api/v1/{path}/{record_id}/restore').status_code == 200
+
+
+@pytest.mark.db
+def test_db_master_data_optional_phone_and_money_can_clear(db_client):
+    db_client.post('/api/v1/suppliers', json={
+        'SUPPLIER_NO': 'DB-SUP-002',
+        'NAME': 'Clearable',
+        'TELEPHONE': '01234567890',
+        'CURR_BAL': '12.50',
+    })
+
+    response = db_client.patch('/api/v1/suppliers/DB-SUP-002', json={
+        'TELEPHONE': '',
+        'CURR_BAL': '',
+    })
+
+    assert response.status_code == 200
+    assert response.json['data']['TELEPHONE'] is None
+    assert response.json['data']['CURR_BAL'] is None
+
+
+@pytest.mark.db
+def test_db_money_sort_is_numeric(db_client):
+    db_client.post('/api/v1/delivery-sites', json={
+        'SITE_NO': 'DB-SITE-100', 'ORIGINATE': 'A', 'DESTINATE': 'B', 'GROSS_PRC': '100.00',
+    })
+    db_client.post('/api/v1/delivery-sites', json={
+        'SITE_NO': 'DB-SITE-020', 'ORIGINATE': 'A', 'DESTINATE': 'B', 'GROSS_PRC': '20.00',
+    })
+
+    response = db_client.get('/api/v1/delivery-sites?sort=GROSS_PRC&direction=asc')
+
+    assert response.status_code == 200
+    assert response.json['data'][0]['SITE_NO'] == 'DB-SITE-020'
 
 
 @pytest.mark.db

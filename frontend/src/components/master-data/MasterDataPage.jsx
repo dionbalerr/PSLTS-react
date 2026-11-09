@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { masterDataConfig } from '../../config/masterDataConfig'
-import { listRecordsAsync, createRecord, listRecords, removeRecord, restoreRecord, updateRecord } from '../../services/masterDataService'
+import { listRecordsAsync, createRecord, removeRecord, restoreRecord, updateRecord } from '../../services/masterDataService'
 import DataTable from './DataTable'
 import DeleteDialog from './DeleteDialog'
 import MasterDataDrawer from './MasterDataDrawer'
@@ -10,13 +10,12 @@ import SummaryCardRow from './SummaryCardRow'
 function MasterDataPage({ resource })
 {
   const config = masterDataConfig[resource]
-  const usingApi = resource === 'drivers'
-  const [rows, setRows] = useState(() => usingApi ? [] : listRecords(resource))
+  const [rows, setRows] = useState([])
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageCount, setPageCount] = useState(1)
-  const [totalCount, setTotalCount] = useState(usingApi ? 0 : rows.length)
-  const [loading, setLoading] = useState(usingApi)
+  const [totalCount, setTotalCount] = useState(0)
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [restoring, setRestoring] = useState(false)
@@ -31,17 +30,6 @@ function MasterDataPage({ resource })
 
   useEffect(() =>
     {
-      if (!usingApi)
-      {
-        const records = listRecords(resource)
-        setRows(records)
-        setTotalCount(records.length)
-        setPageCount(1)
-        setLoading(false)
-        setError(null)
-        return undefined
-      }
-
       const controller = new AbortController()
       let active = true
 
@@ -94,22 +82,9 @@ function MasterDataPage({ resource })
           active = false
           controller.abort()
         }
-    }, [page, reloadKey, resource, search, usingApi])
+    }, [page, reloadKey, resource, search])
 
-  const filteredRows = useMemo(() =>
-    {
-      if (usingApi)
-      {
-        return rows
-      }
-
-      const query = search.trim().toLowerCase()
-      if (!query)
-      {
-        return rows
-      }
-      return rows.filter((row) => Object.values(row).some((value) => String(value).toLowerCase().includes(query)))
-    }, [rows, search, usingApi])
+  const filteredRows = rows
 
   function openCreate()
   {
@@ -147,22 +122,15 @@ function MasterDataPage({ resource })
       const id = drawerRecord?.[config.idField]
       if (id)
       {
-        await updateRecord(resource, config.idField, id, record)
+        await updateRecord(resource, id, record)
       }
       else
       {
         await createRecord(resource, record)
       }
 
-      if (usingApi)
-      {
-        setPage(1)
-        setReloadKey((current) => current + 1)
-      }
-      else
-      {
-        setRows(listRecords(resource))
-      }
+      setPage(1)
+      setReloadKey((current) => current + 1)
       closeDrawer()
     }
     catch (saveError)
@@ -181,26 +149,15 @@ function MasterDataPage({ resource })
     setError(null)
     try
     {
-      const removed = await removeRecord(resource, config.idField, deleteRecord[config.idField])
+      const removed = await removeRecord(resource, deleteRecord[config.idField])
       const deletedEntry = {
         idField: config.idField,
         record: removed.record,
       }
-      if (!usingApi)
-      {
-        deletedEntry.index = removed.index
-      }
       setRecentlyDeleted(deletedEntry)
       setDeleteError(null)
       setDeleteRecord(null)
-      if (usingApi)
-      {
-        setReloadKey((current) => current + 1)
-      }
-      else
-      {
-        setRows(listRecords(resource))
-      }
+      setReloadKey((current) => current + 1)
     }
     catch (deleteError)
     {
@@ -222,14 +179,7 @@ function MasterDataPage({ resource })
     {
       await restoreRecord(resource, recentlyDeleted)
       setRecentlyDeleted((current) => current === entry ? null : current)
-      if (usingApi)
-      {
-        setReloadKey((current) => current + 1)
-      }
-      else
-      {
-        setRows(listRecords(resource))
-      }
+      setReloadKey((current) => current + 1)
     }
     catch (restoreError)
     {
@@ -243,17 +193,10 @@ function MasterDataPage({ resource })
 
   function refreshRows()
   {
-    if (usingApi)
-    {
-      setReloadKey((current) => current + 1)
-    }
-    else
-    {
-      setSearch('')
-    }
+    setReloadKey((current) => current + 1)
   }
 
-  const visibleCount = usingApi ? totalCount : filteredRows.length
+  const visibleCount = totalCount
 
   return (
     <>
@@ -275,9 +218,9 @@ function MasterDataPage({ resource })
 
       {error && <div className="api-error" role="alert">{error.message}</div>}
       <section className="data-table-panel panel">
-        <div className="table-summary"><span>{visibleCount} {config.title.toLowerCase()}</span><span>{usingApi ? 'PostgreSQL API' : 'Local mock data'}</span></div>
+        <div className="table-summary"><span>{visibleCount} {config.title.toLowerCase()}</span><span>PostgreSQL API</span></div>
         {loading ? <div className="table-empty">Loading...</div> : <DataTable columns={config.columns} onDelete={openDelete} onEdit={openEdit} rows={filteredRows} />}
-        {usingApi && pageCount > 1 && <div className="table-pagination"><button className="filter-button" disabled={page === 1} onClick={() => setPage((current) => current - 1)} type="button">Previous</button><span>Page {page} of {pageCount}</span><button className="filter-button" disabled={page === pageCount} onClick={() => setPage((current) => current + 1)} type="button">Next</button></div>}
+        {pageCount > 1 && <div className="table-pagination"><button className="filter-button" disabled={page === 1} onClick={() => setPage((current) => current - 1)} type="button">Previous</button><span>Page {page} of {pageCount}</span><button className="filter-button" disabled={page === pageCount} onClick={() => setPage((current) => current + 1)} type="button">Next</button></div>}
       </section>
 
       {recentlyDeleted && <div className="restore-banner">{recentlyDeleted.record[config.idField]} deleted. {error && error.message} <button disabled={restoring} onClick={restoreRecentlyDeleted} type="button">{restoring ? 'Restoring...' : 'Restore'}</button></div>}

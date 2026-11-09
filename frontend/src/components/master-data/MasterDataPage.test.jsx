@@ -57,15 +57,95 @@ test('failed Drivers save keeps drawer values', async () =>
   })
 
 
-test('non-Drivers resources remain mock-backed', () =>
+test('non-Drivers resources use the API-backed page', async () =>
   {
-    const fetchMock = vi.fn()
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [], pagination: { total: 0, total_pages: 0 } }),
+    })
     vi.stubGlobal('fetch', fetchMock)
 
     render(<MasterDataPage resource="suppliers" />)
 
-    expect(screen.getByText('Local mock data')).toBeInTheDocument()
-    expect(fetchMock).not.toHaveBeenCalled()
+    await waitFor(() => expect(screen.getByText('PostgreSQL API')).toBeInTheDocument())
+    expect(fetchMock.mock.calls[0][0]).toContain('/api/v1/suppliers')
+  })
+
+
+test('supplier drawer blocks missing required fields', async () =>
+  {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [], pagination: { total: 0, total_pages: 0 } }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<MasterDataPage resource="suppliers" />)
+    await waitFor(() => expect(screen.getByText('No records found.')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: '+ Add supplier' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(screen.getByText('Supplier ID is required.')).toBeInTheDocument()
+    expect(screen.getByText('Name is required.')).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+
+test('delivery-site drawer validates money precision', async () =>
+  {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [], pagination: { total: 0, total_pages: 0 } }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<MasterDataPage resource="deliverySites" />)
+    await waitFor(() => expect(screen.getByText('No records found.')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: '+ Add delivery site' }))
+    fireEvent.change(screen.getByLabelText('Site ID'), { target: { value: 'SITE-001' } })
+    fireEvent.change(screen.getByLabelText('Originate'), { target: { value: 'A' } })
+    fireEvent.change(screen.getByLabelText('Destinate'), { target: { value: 'B' } })
+    fireEvent.change(screen.getByLabelText('Gross Price'), { target: { value: '12.345' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(screen.getByText('Gross Price allows up to 2 decimal places.')).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+
+test('supplier drawer normalizes phone input to digits', async () =>
+  {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [], pagination: { total: 0, total_pages: 0 } }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<MasterDataPage resource="suppliers" />)
+    await waitFor(() => expect(screen.getByText('No records found.')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: '+ Add supplier' }))
+    fireEvent.change(screen.getByLabelText('Telephone'), { target: { value: '012-345' } })
+
+    expect(screen.getByLabelText('Telephone')).toHaveValue('012345')
+  })
+
+
+test('client drawer blocks missing company name', async () =>
+  {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [], pagination: { total: 0, total_pages: 0 } }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<MasterDataPage resource="clients" />)
+    await waitFor(() => expect(screen.getByText('No records found.')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: '+ Add client' }))
+    fireEvent.change(screen.getByLabelText('Client ID'), { target: { value: 'CLI-001' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(screen.getByText('Company is required.')).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
 
